@@ -1,0 +1,3 @@
+gym
+ale-py
+autorom[accept-rom-license]
