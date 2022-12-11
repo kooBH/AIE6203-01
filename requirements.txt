@@ -1,3 +1,6 @@
-gym
+gymnasium
 ale-py
 autorom[accept-rom-license]
+opencv-python
+scipy
+torch
