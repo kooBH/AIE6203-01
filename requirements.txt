@@ -4,3 +4,4 @@ autorom[accept-rom-license]
 opencv-python
 scipy
 torch
+array2gif

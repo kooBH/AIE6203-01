@@ -297,8 +297,13 @@ def play_and_record(initial_state, agent, env, exp_replay, n_steps=1):
 
     # Play the game for n_steps as per instructions above
     for _ in range(n_steps):
-        qvalues = agent.get_qvalues(s)
-        action = agent.sample_actions(qvalues)[0]
+        if agent.policy : 
+            logits = agent.forward([s])
+            action = agent.sample_actions(logits)[0]
+            action = action.detach().cpu().numpy()[0]
+        else : 
+            qvalues = agent.get_qvalues(s)
+            action = agent.sample_actions(qvalues)[0]
         s_n, r, done, truncated,info = env.step(action)
 
         exp_replay.add(s, action, r, s_n, done)
@@ -314,6 +319,7 @@ def compute_td_loss(states, actions, rewards, next_states, is_done,
                     agent, target_network, is_weight,
                     gamma=0.99,
                     check_shapes=False,
+                    criterion = F.smooth_l1_loss,
                     device=torch.device('cpu'), double_dqn=True):
     """ Compute td loss using torch operations only. Use the formulae above. """
     states = torch.tensor(states, device=device, dtype=torch.float)  # shape: [batch_size, *state_shape]

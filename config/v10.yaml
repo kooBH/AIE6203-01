@@ -1,0 +1,4 @@
+train:
+  double_dqn : True
+---
+loss : "huber" # smooth_l1, huber

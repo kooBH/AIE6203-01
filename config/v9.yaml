@@ -1,0 +1,3 @@
+train:
+  double_dqn : True
+  priority_replay : True

@@ -1,0 +1,5 @@
+train:
+  double_dqn : True
+---
+model:
+  dueling : True

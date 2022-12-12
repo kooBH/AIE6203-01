@@ -1,6 +1,16 @@
 # AIE6203-01
 2022-2 강화학습 - gymnasium KungFuMaster  
 
+## Usage
+
+see ```train_d0.sh``` and ```src/train.py``` for training.  
+
+see ```demo.ipynb``` and ```eval.sh``` and ```src/eval.py``` for evaluation.   
+
+see [Experiments](https://docs.google.com/spreadsheets/d/1hte_S2b6fM9T9JFwS2mAJ9D0NY0Bejd6tPiN8hBqMhs/edit?usp=sharing) for configurations and results. 
+
++ Note : There is hard-coded log directory in ```config/default.yaml```.log.root 
+
 ## Note
 The team that has been maintaining Gym since 2021 has moved all future development to Gymnasium.   
 

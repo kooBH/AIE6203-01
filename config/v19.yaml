@@ -1,0 +1,2 @@
+train:
+  type : "A2C" # DQN, policy_gradient, A2C

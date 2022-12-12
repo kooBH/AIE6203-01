@@ -5,20 +5,29 @@ eps :
   linear : 
     start : 1
     end : 0.01
-  annealing : 
+    decay : 50000
+  linear_annealing : 
+    start : 1
+    end : 0.01
+    decay : 50000
+    annealing : 0.15
 ---
 model:
   activation : "ReLU"
   dueling : False
 ---
+loss : "smooth_l1" # smooth_l1, huber
+---
 train:
-  total_steps : 100000
-  replay_size : 100000
+  type : "DQN" # DQN, policy_gradient
+  total_steps : 50000
+  policy_gradient : 
+    n_step : 100
+  replay_size : 50000
   gamma : 0.99
-  update_interval : 2500 # Target network update interval
+  update_interval : 500 # Target network update interval
   max_grad : 20 # Gradient clipping
   double_dqn : False
-
   batch_size: 128
   optimizer: 'adam'
   adam: 0.001
@@ -26,9 +35,14 @@ train:
     initial: 0.001
     final: 0.05
   frame_num: 128
-  summary_interval: 10
-  validation_interval: 100
+  summary_interval: 500
+  validation_interval: 2500
   checkpoint_interval: 1000
+  priority_replay : False
+  priority :
+    alpha : 0.7
+    beta : 0.5
+
 ---
 scheduler: # Plateau, oneCycle, None
   type: 'Plateau'

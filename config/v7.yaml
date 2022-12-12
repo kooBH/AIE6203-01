@@ -1,0 +1,7 @@
+train:
+  double_dqn : True
+---
+eps :
+  type : "fixed"
+  fixed :
+    eps : 0.3

@@ -1,0 +1,10 @@
+train:
+  double_dqn : True
+---
+eps :
+  type : "linear_annealing"
+  linear_annealing : 
+    start : 1
+    end : 0.01
+    decay : 100000
+    annealing : 0.15

@@ -1,0 +1,3 @@
+---
+train:
+  update_interval : 2500 # Target network update interval

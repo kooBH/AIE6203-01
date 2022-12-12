@@ -1,0 +1,2 @@
+train:
+  double_dqn : True

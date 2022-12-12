@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
+from torch.nn import functional as F
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -14,15 +14,45 @@ def weights_init(m):
         nn.init.xavier_normal_(m.weight, gain=nn.init.calculate_gain('relu'))
         m.bias.data.fill_(0.01)
 
+def normalized_columns_initializer(weights, std=1.0):
+    out = torch.randn(weights.size())
+    out *= std / torch.sqrt(out.pow(2).sum(1, keepdim=True))
+    return out
+
 class DQN(nn.Module):
-    def __init__(self, state_shape, n_actions, epsilon=0):
+    def __init__(self, state_shape, n_actions, epsilon=0,
+    dueling=False,
+    policy=False,  # PolicyNetwork for policy gradient
+    value=False    # ValueNetwork for policy gradient
+    ):
         super().__init__()
         self.epsilon = epsilon
         self.n_actions = n_actions
         self.state_shape = state_shape
+        """
+            Dueling  : Wang, Ziyu, et al. "Dueling network architectures for deep reinforcement learning." International conference on machine learning. PMLR, 2016.
+            
+            idea : How a' is better than others actions ? 
+                   A(s,a) = Q(s,a) - V(s)
+            effect : by seprating V, A, the model can learn which states are valueable.
+            
+        """
+        self.dueling = dueling
+        self.policy = policy
+        self.value = value
 
-        # Define your network body here. Please make sure agent is fully contained here
-        # nn.Flatten() can be useful
+        cnt_mult = 0
+
+        if dueling : 
+            cnt_mult += 1
+        if policy : 
+            cnt_mult += 1
+        if value : 
+            cnt_mult += 1
+
+        if cnt_mult > 1 :
+            raise Exception("ERROR::Do only one thing | dueling {} | policy {} | value {}.".format(dueling,policy,value))
+        print("Network:: dueling {} | policy {} | value {}.".format(dueling,policy,value))
         self.block_1 = nn.Sequential(
             nn.Conv2d(4, 32, 3, 2),
             nn.ReLU(),
@@ -47,14 +77,32 @@ class DQN(nn.Module):
             #nn.BatchNorm2d(256),
         )
 
-        self.block_5 = nn.Sequential(
-            nn.Flatten(),
-            #nn.Linear(2304, 1024),
-            nn.Linear(256, 1024),
-            # nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.Linear(1024, n_actions),
-        )
+        if dueling :
+            self.block_5 = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(256, 1024),
+            )
+            self.value_net =  nn.Sequential(
+                nn.Linear(1024,1)
+            )
+            self.advantage = nn.Sequential(
+                nn.Linear(1024,n_actions)
+            )
+        elif value : 
+            self.block_5 = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(256, 1024),
+                nn.ReLU(),
+                nn.Linear(1024, 1),
+            )
+        # vanila, policy gradient
+        else : 
+            self.block_5 = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(256, 1024),
+                nn.ReLU(),
+                nn.Linear(1024, n_actions),
+            )
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -64,6 +112,10 @@ class DQN(nn.Module):
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+        if policy : 
+            self.block_5[-1].weight.data = normalized_columns_initializer(
+                self.block_5[-1].weight.data, 0.1)
+            self.block_5[-1].bias.data.fill_(0)
 
     def forward(self, state_t):
         """
@@ -78,28 +130,54 @@ class DQN(nn.Module):
         x = self.block_3(x)
         x = self.block_4(x)
 
-        qvalues = self.block_5(x)
-        return qvalues
+        if self.dueling : 
+            x = self.block_5(x)
+            v = self.value_net(x)
+            a = self.advantage(x)
+            a_avg = torch.mean(a, axis=1, keepdims=True)
+            qvalues = v + a - a_avg
+            return qvalues
+        elif self.policy : 
+            ret = self.block_5(x)
+            return ret
+        # vanila, value
+        else : 
+            ret = self.block_5(x)
+            return ret
 
     def get_qvalues(self, states):
         """
         like forward, but works on numpy arrays, not tensors
         """
-
         # ADD : batch dim for torch layers
         states = np.expand_dims(states,0)
         with torch.no_grad():
             qvalues = self.forward(states)
         return qvalues.data.cpu().numpy()
 
-    def sample_actions(self, qvalues):
-        """pick actions given qvalues. Uses epsilon-greedy exploration strategy. """
-        epsilon = self.epsilon
-        batch_size, n_actions = qvalues.shape
+    def sample_actions(self, x):
+        if not self.policy :
+            """pick actions given qvalues. Uses epsilon-greedy exploration strategy. """
+            epsilon = self.epsilon
+            batch_size, n_actions = x.shape
+            random_actions = np.random.choice(n_actions, size=batch_size)
+            best_actions = x.argmax(axis=-1)
 
-        random_actions = np.random.choice(n_actions, size=batch_size)
-        best_actions = qvalues.argmax(axis=-1)
+            should_explore = np.random.choice(
+                [0, 1], batch_size, p=[1 - epsilon, epsilon])
+            return np.where(should_explore, random_actions, best_actions)
+        # policy graident
+        else :
+            probs = F.softmax(x, dim=1)
+            # torch.multinomial : Returns a tensor where each row contains num_samples indices sampled from the multinomial probability distribution located in the corresponding row of tensor input.
+            action = probs.multinomial(num_samples=1).detach()
+            return action
 
-        should_explore = np.random.choice(
-            [0, 1], batch_size, p=[1 - epsilon, epsilon])
-        return np.where(should_explore, random_actions, best_actions)
+    def best_actions(self, logits):
+        probs = F.softmax(logits, dim=1)
+        action = probs.max(1, keepdim=True)[1].detach().cpu().numpy()
+        return action
+
+
+
+

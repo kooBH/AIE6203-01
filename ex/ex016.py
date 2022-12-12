@@ -44,6 +44,9 @@ class ReplayBuffer():
 class DuelingQnet(nn.Module):
     def __init__(self):
         super(DuelingQnet, self).__init__()
+
+        
+
         self.fc1 = nn.Linear(4, 128)
         self.fc_value = nn.Linear(128, 128)
         self.fc_adv = nn.Linear(128, 128)
@@ -110,7 +113,6 @@ def train(q, q_target, memory, optimizer):
 
         # Smooth L1 Loss
         #loss = F.smooth_l1_loss(q_a, target)
-
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
