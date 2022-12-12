@@ -1,6 +1,8 @@
 # AIE6203-01
 2022-2 강화학습 - gymnasium KungFuMaster  
 
+![v3_14400](https://user-images.githubusercontent.com/39723411/207061052-9ed61df0-4706-4475-80ad-1d53f1e4faa0.gif)
+
 ## Usage
 
 see ```train_d0.sh``` and ```src/train.py``` for training.  
